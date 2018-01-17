@@ -1,3 +1,4 @@
+import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.Jsoup;
@@ -15,18 +16,19 @@ import java.util.ArrayList;
 public class BasicWebCrawler {
 	
     public static void main(String[] args) {
-    	
-    	
+    		Logger logger = Logger.getLogger(BasicWebCrawler.class);
     		Elements elements;
     		String title, category;
     		int firstIndexOf, secondIndexOf;
     		Document document;    		
     		String URL;
+    		int cntPost = 0;
+    		int cntCommon = 0;
     		
     		JSONArray posts = new JSONArray();
     		JSONArray commons = new JSONArray();
     		
-    		for(int i = 27000000; i < 27100000; i++) {
+    		for(int i = 27000000; i < 28000000; i++) {
     			URL = "http://www.discuss.com.hk/viewthread.php?tid=" + i;
     			System.out.println(URL);
 	    		try {
@@ -52,19 +54,28 @@ public class BasicWebCrawler {
 			    			common.put("id", i);
 			    			JSONArray content = new JSONArray();
 			    			for(Element element : elements) {
-			    				content.put(element.text());
+			    				if(element.text().length() < 50) {
+			    					content.put(element.text());
+			    				}
 			    			}
 			    			common.put("content", content);
 			    			
 			    			if(content.length() != 0) {
 			    				posts.put(post);
 			    				commons.put(common);
+			    				
+			    				cntPost++;
+			    				cntCommon = cntCommon + content.length();
+				    			logger.info("The total number of post:" + cntPost);
+				    			logger.info("The total number of common:" + cntCommon);
+				    			logger.info("The number of common " + content.length() + " in post " + i);
 			    			}
 		    			}
 	    			}
 	    			writerToJson(posts, commons);
 	    		}catch(IOException e) {
 	    			System.err.println("For '" + URL + "': " + e.getMessage());
+	    			logger.error(e);
 	    		}
     		}
     }
