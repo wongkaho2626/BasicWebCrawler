@@ -17,62 +17,51 @@ public class BasicWebCrawler {
 	
     public static void main(String[] args) {
     		Logger logger = Logger.getLogger(BasicWebCrawler.class);
-    		Elements elements;
-    		String title, category;
-    		int firstIndexOf, secondIndexOf;
-    		Document document;    		
-    		String URL;
     		int cntPost = 0;
     		int cntCommon = 0;
     		
     		JSONArray posts = new JSONArray();
-    		JSONArray commons = new JSONArray();
+    		JSONArray comments = new JSONArray();
     		
-    		for(int i = 27000000; i < 28000000; i++) {
-    			URL = "http://www.discuss.com.hk/viewthread.php?tid=" + i;
-    			System.out.println(URL);
+    		for(int i = 27000000; i < 27100000; i++) {
+    			String URL = "http://www.discuss.com.hk/viewthread.php?tid=" + i;
 	    		try {
-	    			document = Jsoup.connect(URL).get();
+	    			Document document = Jsoup.connect(URL).get();
+
 	    			if(document.title() != "") {
-		    			firstIndexOf = document.title().indexOf("-");
-		    			secondIndexOf = document.title().indexOf('-', document.title().indexOf('-')+1);
-		    			
-		    			title = document.title().substring(0, firstIndexOf).trim();
-		    			System.out.println(title);
-		    			if(!title.equals("香港討論區 Discuss.com.hk")) {
-		    				category = document.title().substring(firstIndexOf+1, secondIndexOf).trim();
-		    			
-		
-			    			elements = document.select("span[id~=^postorig_[0-9]+$]:not(:has(div))");
-			    			
-			    			JSONObject post = new JSONObject();
-			    			post.put("id", i);
-			    			post.put("title", title);
-			    			post.put("category", category);
-			    			
-			    			JSONObject common = new JSONObject();
-			    			common.put("id", i);
-			    			JSONArray content = new JSONArray();
-			    			for(Element element : elements) {
-			    				if(element.text().length() < 50) {
-			    					content.put(element.text());
-			    				}
-			    			}
-			    			common.put("content", content);
-			    			
-			    			if(content.length() != 0) {
-			    				posts.put(post);
-			    				commons.put(common);
-			    				
-			    				cntPost++;
-			    				cntCommon = cntCommon + content.length();
-				    			logger.info("The total number of post:" + cntPost);
-				    			logger.info("The total number of common:" + cntCommon);
-				    			logger.info("The number of common " + content.length() + " in post " + i);
+	    				int firstIndexOf = 0;
+	    				firstIndexOf = document.title().indexOf(" - ");	
+	    				if(firstIndexOf > 0) {
+		    				String title = document.title().substring(0, firstIndexOf).trim();
+			    			if(!title.equals("香港討論區 Discuss.com.hk")) {		
+			    				Elements elements = document.select("span[id~=^postorig_[0-9]+$]:not(:has(div))");
+				    			
+				    			JSONObject post = new JSONObject();
+				    			post.put("id", i);
+				    			post.put("title", title);
+				    			
+				    			JSONObject comment = new JSONObject();
+				    			comment.put("id", i);
+				    			JSONArray content = new JSONArray();
+				    			for(Element element : elements) {
+				    				if(element.text().length() < 50) {
+				    					content.put(element.text());
+				    				}
+				    			}
+				    			comment.put("content", content);
+				    			
+				    			if(content.length() != 0) {
+				    				posts.put(post);
+				    				comments.put(comment);
+				    				
+				    				cntPost++;
+				    				cntCommon = cntCommon + content.length();
+				    				logger.info("post = " + i + ", cntPost = " + cntPost + ", cntComment = " + cntCommon);
+				    			}
 			    			}
 		    			}
 	    			}
-	    			writerToJson(posts, commons);
+	    			writerToJson(posts, comments);
 	    		}catch(IOException e) {
 	    			System.err.println("For '" + URL + "': " + e.getMessage());
 	    			logger.error(e);
@@ -82,7 +71,7 @@ public class BasicWebCrawler {
     
     public static void writerToJson (JSONArray post, JSONArray common) throws IOException {
     		File filePost = new File("post.json");
-    		File fileCommon = new File("common.json");
+    		File fileCommon = new File("comment.json");
     		if (!filePost.exists()) {
     			filePost.createNewFile();
     		}
