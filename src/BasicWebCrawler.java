@@ -12,18 +12,35 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 
 public class BasicWebCrawler {
+	private static final String POST = "post";
+	private static final String COMMENT = "comment";
 	
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
     		Logger logger = Logger.getLogger(BasicWebCrawler.class);
     		int cntPost = 0;
     		int cntCommon = 0;
     		
-    		JSONArray posts = new JSONArray();
-    		JSONArray comments = new JSONArray();
+    		BufferedWriter bwPost = null;
+    		FileWriter fwPost = null;
+    		BufferedWriter bwComment = null;
+    		FileWriter fwComment = null;
     		
-    		for(int i = 27000000; i < 27100000; i++) {
+    		File filePost = new File(POST);
+    		File fileComment = new File(COMMENT);
+
+    		// if file doesnt exists, then create it
+    		if (!filePost.exists()) {
+    			filePost.createNewFile();
+    		}
+    		if (!fileComment.exists()) {
+    			fileComment.createNewFile();
+    		}
+
+    		for(int i = 26000000; i < 27000000; i++) {
     			String URL = "http://www.discuss.com.hk/viewthread.php?tid=" + i;
 	    		try {
 	    			Document document = Jsoup.connect(URL).get();
@@ -33,61 +50,53 @@ public class BasicWebCrawler {
 	    				firstIndexOf = document.title().indexOf(" - ");	
 	    				if(firstIndexOf > 0) {
 		    				String title = document.title().substring(0, firstIndexOf).trim();
-			    			if(!title.equals("香港討論區 Discuss.com.hk")) {		
+			    			if(!title.equals("香港討論區 Discuss.com.hk")) {					
 			    				Elements elements = document.select("span[id~=^postorig_[0-9]+$]:not(:has(div))");
 				    			
-				    			JSONObject post = new JSONObject();
-				    			post.put("id", i);
-				    			post.put("title", title);
+			    	    			fwComment = new FileWriter(fileComment.getAbsoluteFile(), true);
+			    	    			bwComment = new BufferedWriter(fwComment);
+			    	    			
+			    	    			int cntElement = 0;
+			    	    			LinkedHashSet hashSetComment = new LinkedHashSet();
+			    	    			for(Element element : elements) {
+			    	    				if(element.text().length() < 50 && element.text().length() > 0) {
+			    	    					hashSetComment.add(element.text());
+			    	    				}
+			    	    			}
+			    	    			
+			    	    			for(Object h : hashSetComment) {
+			    	    				cntElement++;
+			    	    				bwComment.write(i + "-" + cntElement + " " + h.toString());
+			    	    				bwComment.newLine();	
+			    	    			}
 				    			
-				    			JSONObject comment = new JSONObject();
-				    			comment.put("id", i);
-				    			JSONArray content = new JSONArray();
-				    			for(Element element : elements) {
-				    				if(element.text().length() < 50) {
-				    					content.put(element.text());
-				    				}
+				    			if(cntElement > 0) {
+					    			// true = append file
+				    				fwPost = new FileWriter(filePost.getAbsoluteFile(), true);
+				    	    			bwPost = new BufferedWriter(fwPost);
+				    	    			
+				    	    			bwPost.write(i + " " + title);
+				    	    			bwPost.newLine();
+						    		cntPost++;
+						    		cntCommon = cntCommon + cntElement;
+					    			logger.info("post = " + i + ", cntPost = " + cntPost + ", cntComment = " + cntCommon);				    			
 				    			}
-				    			comment.put("content", content);
-				    			
-				    			if(content.length() != 0) {
-				    				posts.put(post);
-				    				comments.put(comment);
-				    				
-				    				cntPost++;
-				    				cntCommon = cntCommon + content.length();
-				    				logger.info("post = " + i + ", cntPost = " + cntPost + ", cntComment = " + cntCommon);
-				    			}
+
+				    			if(bwPost != null)
+				    				bwPost.close();
+				    			if(fwPost != null)
+				    				fwPost.close();
+				    			if(bwComment != null)
+				    				bwComment.close();
+				    			if(fwComment != null)
+				    				fwComment.close();
 			    			}
 		    			}
 	    			}
-	    			writerToJson(posts, comments);
 	    		}catch(IOException e) {
 	    			System.err.println("For '" + URL + "': " + e.getMessage());
 	    			logger.error(e);
 	    		}
     		}
     }
-    
-    public static void writerToJson (JSONArray post, JSONArray common) throws IOException {
-    		File filePost = new File("post.json");
-    		File fileCommon = new File("comment.json");
-    		if (!filePost.exists()) {
-    			filePost.createNewFile();
-    		}
-    		if (!fileCommon.exists()) {
-    			fileCommon.createNewFile();
-    		}
-    		FileWriter fwp = new FileWriter(filePost);
-    		FileWriter fwc = new FileWriter(fileCommon);
-    		
-    		BufferedWriter writerPost = new BufferedWriter(fwp);
-    		BufferedWriter writerCommon = new BufferedWriter(fwc);
-
-    		writerPost.write(post.toString());
-    		writerPost.close();
-		
-    		writerCommon.write(common.toString());
-    		writerCommon.close();
-	}
 }
