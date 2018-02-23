@@ -1,6 +1,4 @@
 import org.apache.log4j.Logger;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -10,16 +8,19 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 
-public class BasicWebCrawler {
+public class BasicWebCrawler extends Thread{
 	private static final String POST = "post";
 	private static final String COMMENT = "comment";
+	int NUMBER;
 	
-    public static void main(String[] args) throws IOException {
+	public BasicWebCrawler (int NUMBER) {
+		this.NUMBER = NUMBER;
+	}
+	
+	public void run() {
+    		System.setProperty("my.log", "C:\\BasicWebCrawler2\\log4j-application" + NUMBER + ".log");
     		Logger logger = Logger.getLogger(BasicWebCrawler.class);
     		int cntPost = 0;
     		int cntCommon = 0;
@@ -29,18 +30,28 @@ public class BasicWebCrawler {
     		BufferedWriter bwComment = null;
     		FileWriter fwComment = null;
     		
-    		File filePost = new File(POST);
-    		File fileComment = new File(COMMENT);
+    		File filePost = new File(POST + NUMBER/10000);
+    		File fileComment = new File(COMMENT + NUMBER/10000);
 
     		// if file doesnt exists, then create it
     		if (!filePost.exists()) {
-    			filePost.createNewFile();
+    			try {
+					filePost.createNewFile();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
     		}
     		if (!fileComment.exists()) {
-    			fileComment.createNewFile();
+    			try {
+					fileComment.createNewFile();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
     		}
-
-    		for(int i = 26000000; i < 27000000; i++) {
+    		
+    		for(int i = NUMBER; i < NUMBER + 1000000; i++) {
     			String URL = "http://www.discuss.com.hk/viewthread.php?tid=" + i;
 	    		try {
 	    			Document document = Jsoup.connect(URL).get();
@@ -50,23 +61,31 @@ public class BasicWebCrawler {
 	    				firstIndexOf = document.title().indexOf(" - ");	
 	    				if(firstIndexOf > 0) {
 		    				String title = document.title().substring(0, firstIndexOf).trim();
-			    			if(!title.equals("香港討論區 Discuss.com.hk")) {					
-			    				Elements elements = document.select("span[id~=^postorig_[0-9]+$]:not(:has(div))");
-				    			
+			    			if(!title.equals("香港討論區 Discuss.com.hk")) {
+			    				Elements elements = document.select("span[id~=^postorig_[0-9]+$]");
+			    				Elements filterElements = document.select("span[id~=^postorig_[0-9]+$] > div");
 			    	    			fwComment = new FileWriter(fileComment.getAbsoluteFile(), true);
 			    	    			bwComment = new BufferedWriter(fwComment);
 			    	    			
 			    	    			int cntElement = 0;
 			    	    			LinkedHashSet hashSetComment = new LinkedHashSet();
 			    	    			for(Element element : elements) {
-			    	    				if(element.text().length() < 50 && element.text().length() > 0) {
-			    	    					hashSetComment.add(element.text());
+			    	    				String txt = filterWord(element.text(), filterElements);
+			    	    				if(txt.length() < 500 && txt.length() > 0) {
+			    	    					hashSetComment.add(txt);
 			    	    				}
 			    	    			}
 			    	    			
 			    	    			for(Object h : hashSetComment) {
 			    	    				cntElement++;
-			    	    				bwComment.write(i + "-" + cntElement + " " + h.toString());
+			    	    				String num = null;
+			    	    				for(int j = 0; j < elements.size(); j++) {
+			    	    					if(filterWord(elements.get(j).text(), filterElements).equals(h.toString())) {
+				    	    					Elements postnumber = document.select("strong[id~=^" + elements.get(j).id().replace("postorig_", "postnum_") + "]:not(:has(div))");
+			    	    						num = postnumber.get(0).text().replace("#", "");
+			    	    					}
+			    	    				}
+			    	    				bwComment.write(i + "-" + num + " " + h.toString());
 			    	    				bwComment.newLine();	
 			    	    			}
 				    			
@@ -99,4 +118,16 @@ public class BasicWebCrawler {
 	    		}
     		}
     }
+    
+    private static String filterWord(String input, Elements filterElements) {
+		String output = input;
+		for(Element e : filterElements) {
+			output = output.replace(e.text(), "");
+		}
+		if(input.contains(" [ 本帖最後由")) {
+			int firstindexof = input.indexOf(" [ 本帖最後由");
+			output = input.substring(0, firstindexof);
+		}
+		return output.trim();
+	}
 }
