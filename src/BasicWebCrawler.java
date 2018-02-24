@@ -51,7 +51,7 @@ public class BasicWebCrawler extends Thread{
 				}
     		}
     		
-    		for(int i = NUMBER; i < NUMBER + 1000000; i++) {
+    		for(int i = NUMBER; i < NUMBER + 10000; i++) {
     			String URL = "http://www.discuss.com.hk/viewthread.php?tid=" + i;
 	    		try {
 	    			Document document = Jsoup.connect(URL).get();
