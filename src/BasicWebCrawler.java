@@ -124,8 +124,8 @@ public class BasicWebCrawler extends Thread{
 		for(Element e : filterElements) {
 			output = output.replace(e.text(), "");
 		}
-		if(input.contains(" [ 本帖最後由")) {
-			int firstindexof = input.indexOf(" [ 本帖最後由");
+		if(input.contains("[ 本帖最後由")) {
+			int firstindexof = input.indexOf("[ 本帖最後由");
 			output = input.substring(0, firstindexof);
 		}
 		return output.trim();
